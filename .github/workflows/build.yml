@@ -56,7 +56,7 @@ jobs:
           - edition: hongguojian
             arguments: ''
           - edition: zhenguojian
-            arguments: '--dart-define=ALL_SOURCES=true'
+            arguments: '--all-sources'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -71,12 +71,18 @@ jobs:
           flutter-version: '3.47.4'
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: flutter build apk --release --no-shrink ${{ matrix.arguments }}
+      - name: Generate debug keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          echo "ANDROID_KEYSTORE_BASE64=$(base64 -w 0 debug.keystore)" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=android" >> $GITHUB_ENV
+      - run: python scripts/build_android.py ${{ matrix.arguments }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.edition }}-android
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: dist/android/*
           if-no-files-found: error
           retention-days: 14
 
